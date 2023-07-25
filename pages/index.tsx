@@ -7,32 +7,22 @@ import { getAllPosts } from '../lib/api'
 import Head from 'next/head'
 import { CMS_NAME } from '../lib/constants'
 import Post from '../interfaces/post'
+import { fetchItem, fetchItems } from '../umbraco-cdapi/umbracoContentDeliveryApi';
 
-type Props = {
-  allPosts: Post[]
-}
+type Props = { node, allPosts: Post[], blogPages, morePosts, firstPost };
 
-export default function Index({ allPosts }: Props) {
-  const heroPost = allPosts[0]
-  const morePosts = allPosts.slice(1)
+export default function Index({ node, allPosts, blogPages, morePosts, firstPost }: Props) {
+
+  console.log("firstPost", firstPost);
   return (
     <>
       <Layout>
         <Head>
-          <title>{`Next.js Blog Example with ${CMS_NAME}`}</title>
+          <title>{`Next.js Blog Example with ${node.Name}`}</title>
         </Head>
         <Container>
           <Intro />
-          {heroPost && (
-            <HeroPost
-              title={heroPost.title}
-              coverImage={heroPost.coverImage}
-              date={heroPost.date}
-              author={heroPost.author}
-              slug={heroPost.slug}
-              excerpt={heroPost.excerpt}
-            />
-          )}
+          <p>{`Bio ${node.properties.bio}`}</p>
           {morePosts.length > 0 && <MoreStories posts={morePosts} />}
         </Container>
       </Layout>
@@ -50,7 +40,39 @@ export const getStaticProps = async () => {
     'excerpt',
   ])
 
+  const homepage = await fetchItem('');
+  const blogPages = await fetchItems({ filter: 'blogPost' });
+  const morePosts = [];
+  const firstPost = blogPages.items[0];
+
+  for (let index = 0; index < 2; index++) {
+    var item = blogPages.items[index];
+
+    var post = {
+      title: item.name,
+      excerpt: item.properties.bodyText.markup,
+      author: {
+        name: "Sebastiaan Janssen",
+        picture: "https://cultiv.nl/media/zupl5k1l/https___wwwpolywork.jpg"
+      },
+      date: item.createDate,
+      coverImage: `https://cork.nl${item.properties.image[0].url}`,
+      ogImage: {
+        url: '/assets/blog/hello-world/cover.jpg'
+      },
+      slug: item.route.path
+    };
+    morePosts.push(post);
+  }
+
+
   return {
-    props: { allPosts },
+    props: {
+      node: homepage,
+      allPosts: allPosts,
+      blogPages: blogPages,
+      morePosts: morePosts,
+      firstPost: firstPost
+    },
   }
 }
